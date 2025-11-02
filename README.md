@@ -223,4 +223,30 @@ This entire process is performed using a **Cross-Compiler**. A native compiler r
 
 An embedded toolchain is a cross-compiler. It **runs** on a host PC (e.g., a 64-bit Windows machine) but **generates** machine code for a completely different target architecture (e.g., a 32-bit ARM Cortex-M4). This is essential, as the microcontroller itself lacks the resources to host and run a compiler.
 
+## 4. The GNU ARM Toolchain
+
+The **[GNU Arm Embedded Toolchain](https://developer.arm.com/downloads/toolchains/gnu-arm-embedded)** is a free, open-source collection of tools for C/C++ development for ARM processors. The toolchain is a set of command-line binaries, each with a specific job. The prefix `arm-none-eabi-` tells us:
+
+* **`arm`**: The target architecture is ARM.
+* **`none`**: It does not target a specific operating system (i.e., it's "bare-metal").
+* **`eabi`**: It adheres to the Embedded Application Binary Interface, a standard for how functions are called, how data is structured, etc.
+
+### 4.1. Primary Build Tools
+
+* **[`arm-none-eabi-gcc`](https://gcc.gnu.org/onlinedocs/gcc/index.html) (GNU Compiler Collection):** This is the main "driver." It's a high-level tool that automatically calls the preprocessor, compiler, and assembler. It can also invoke the linker, making it the primary tool we interact with.
+* **[`arm-none-eabi-as`](https://sourceware.org/binutils/docs/as/) (Assembler):** This tool specifically translates `.s` assembly files into `.o` object files. It is usually called by `gcc` in the background.
+* **[`arm-none-eabi-ld`](https://sourceware.org/binutils/docs/ld/) (Linker):** This is the powerful linker responsible for combining all `.o` files into the final `.elf` file, guided by the linker script. `gcc` also calls this in the background during the final linking step.
+
+### 4.2. Binary Analysis Utilities
+
+These tools are not for *building* the code, but for *analyzing* the files we build. They are part of the GNU Binutils package. (See **[Official Binutils Documentation](https://sourceware.org/binutils/docs/binutils/)**)
+
+* **`arm-none-eabi-objdump`:** "Object Dump." This is the most versatile tool for inspecting binary files. It can disassemble the machine code back into assembly, display the symbol table, and show all the section headers (like `.text`, `.data`, `.bss`).
+* **`arm-none-eabi-nm`:** Lists all the **symbols** (functions and global variables) in an object file, showing their addresses and where they are defined.
+* **`arm-none-eabi-readelf`:** Provides a highly detailed analysis of an `.elf` file, showing its structure, headers, and metadata.
+
+### 4.3. Format Converter
+
+* **`arm-none-eabi-objcopy`:** "Object Copy." This utility is used to transform and copy object files. Its most important job is to convert the final `.elf` file into a flashable `.hex` or `.bin` (binary) file by stripping out debug information and extracting only the program data.
+
 
