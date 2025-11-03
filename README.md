@@ -335,3 +335,59 @@ task1_handler:
 ```
 
 This assembly snippet defines the task1_handler function, using directives like .section to separate read-only data (.rodata) from code (.text). It uses labels like task1_handler: to mark the function's start and .L8: to create the infinite while(1) loop. The code loads arguments into register r0 using ldr (for the string address) and movs (for immediate numbers like 12). Finally, it calls other C functions like puts and led_on using the bl (Branch with Link) instruction, and loops indefinitely with the b .L8 instruction.
+
+---
+
+## 6. Analyzing the Object File
+
+The `main.o` file is in **ELF (Executable and Linkable Format)**. This is a standard format for object files and executables that organizes the program into different sections. It's "relocatable" because its code and data don't have final, absolute addresses.
+
+To analyze this file, I use `arm-none-eabi-objdump`.
+
+```powershell
+PS C:\...\buildprocess> arm-none-eabi-objdump -h main.o
+```
+
+* **`-h`**: This flag tells `objdump` to display the "section headers" of the file.
+
+The output shows the different sections inside the object file.
+
+```
+main.o:     file format elf32-littlearm
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .text         0000053c  00000000  00000000  00000034  2**2
+                  CONTENTS, ALLOC, LOAD, RELOC, READONLY, CODE
+  1 .data         00000001  00000000  00000000  00000570  2**0
+                  CONTENTS, ALLOC, LOAD, DATA
+  2 .bss          00000054  00000000  00000000  00000574  2**2
+                  ALLOC
+  3 .rodata       000000c9  00000000  00000000  00000574  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  4 .debug_info   00000472  00000000  00000000  0000063d  2**0
+                  CONTENTS, RELOC, READONLY, DEBUGGING, OCTETS
+  5 .debug_abbrev 00000232  00000000  00000000  00000aaf  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+  6 .debug_aranges 00000020  00000000  00000000  00000ce1  2**0
+                  CONTENTS, RELOC, READONLY, DEBUGGING, OCTETS
+  7 .debug_line   0000031e  00000000  00000000  00000d01  2**0
+                  CONTENTS, RELOC, READONLY, DEBUGGING, OCTETS
+  8 .debug_str    000003ce  00000000  00000000  0000101f  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+  9 .comment      00000047  00000000  00000000  000013ed  2**0
+                  CONTENTS, READONLY
+ 10 .debug_frame  000002d8  00000000  00000000  00001434  2**2
+                  CONTENTS, RELOC, READONLY, DEBUGGING, OCTETS
+ 11 .ARM.attributes 0000002e  00000000  00000000  0000170c  2**0
+                  CONTENTS, READONLY
+```
+
+The most important sections for our program logic are:
+
+* **`.text`**: This section contains the actual binary machine code for the functions (e.g., your `main` function).
+* **`.data`**: This contains global or static variables that are initialized with a non-zero value (e.g., `int my_var = 100;`).
+* **`.bss`**: This section holds *uninitialized* global or static variables (e.g., `int my_buffer[10];`). The `.elf` file just records *how much space* this section needs; the startup code will fill it with zeros in RAM.
+* **`.rodata`**: "Read-Only Data." This is for constant data that won't change, like string literals (e.g., `const char* my_string = "Hello";`).
+
+Notice the `VMA` (Virtual Memory Address) for all sections is `00000000`. This confirms these sections are "relocatable." The linker's job is to collect all these sections from all `.o` files and place them at the correct absolute addresses in the final `.elf` file.
