@@ -1,5 +1,29 @@
 # Demystifying the Embedded C Build Process
 
+## Table of Contents
+
+1.  [Introduction](#1-introduction)
+2.  [The Build Process: From .c to .hex](#2-the-build-process-from-c-to-hex)
+3.  [Core Concepts](#3-core-concepts)
+    * [3.1. The Build Stages Explained](#31-the-build-stages-explained)
+    * [3.2. Cross-Compilation](#32-cross-compilation)
+4.  [The GNU ARM Toolchain](#4-the-gnu-arm-toolchain)
+    * [4.1. Primary Build Tools](#41-primary-build-tools)
+    * [4.2. Binary Analysis Utilities](#42-binary-analysis-utilities)
+    * [4.3. Format Converter](#43-format-converter)
+5.  [Practical Build Walkthrough (ARM)](#5-practical-build-walkthrough)
+    * [5.1. The Compilation Step (.c -> .o)](#51-the-compilation-step-c---o)
+    * [5.2. Analyzing the Assembly File (.s)](#52-analyzing-the-assembly-file-s)
+6.  [Analyzing the Object File](#6-analyzing-the-object-file)
+    * [6.1. Example Output After Linking (program.elf)](#61-example-output-after-linking-programelf)
+7.  [Automating the Build with `make`](#7-automating-the-build-with-make)
+    * [7.1. Sample Makefile](#71-sample-makefile)
+    * [7.2. Makefile Variable Explanation](#72-makefile-variable-explanation)
+    * [7.3. Makefile Rule Explained](#73-makefile-rule-explained)
+8.  [The Compiler: `arm-none-eabi-gcc`](#8-the-compiler-arm-none-eabi-gcc)
+9.  [Bare-Metal Arduino Uno (AVR)](#9-case-study-bare-metal-arduino-uno-avr)
+    
+
 ## 1. Introduction
 
 This repository documents the step-by-step _process of converting C source code into an executable binary for an embedded target_ , **entirely from the command line**. The primary objective is to build and analyze each stage of the compilation toolchain manually, without the abstraction of an Integrated Development Environment (IDE).
@@ -533,9 +557,10 @@ When we use `arm-none-eabi-gcc` to compile and link, it intelligently calls thes
 * The command to build `main.elf` (without the `-c` flag) implicitly calls the **linker (`ld`)** to combine all the object files (`main.o`) and other necessary startup code into a final executable file.
 
   #!/bin/bash
-
-# This script manually duplicates the build process that 'make' automates.
 ```
+# This script manually duplicates the build process that 'make' automates.
+
+
 # --- 1. Compilation Stage ---
 echo "--- Compiling source files... ---"
 
