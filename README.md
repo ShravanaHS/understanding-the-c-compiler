@@ -391,3 +391,179 @@ The most important sections for our program logic are:
 * **`.rodata`**: "Read-Only Data." This is for constant data that won't change, like string literals (e.g., `const char* my_string = "Hello";`).
 
 Notice the `VMA` (Virtual Memory Address) for all sections is `00000000`. This confirms these sections are "relocatable." The linker's job is to collect all these sections from all `.o` files and place them at the correct absolute addresses in the final `.elf` file.
+
+### 6.1. Example Output After Linking (`program.elf`)
+
+After linking all the `.o` files (which I will show in a later step), I would run `arm-none-eabi-objdump -h program.elf`. The output would look something like this. Notice the **VMA** (Virtual Memory Address) column is no longer zero, as the linker has now assigned all the final memory addresses.
+**Analysis of the Linked File:**
+```
+program.elf:     file format elf32-littlearm
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .text         00000a2c  08000000  08000000  00001000  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .rodata       000001bc  08000a2c  08000a2c  00001a2c  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  2 .data         00000008  20000000  08000be8  00001be8  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+  3 .bss          000000a8  20000008  08000bf0  00001bf0  2**2
+                  ALLOC
+  4 .debug_info   00003b7c  00000000  00000000  00001bf0  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+  5 .debug_abbrev 00000a12  00000000  00000000  0000576c  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+... (other debug sections) ...
+```
+The key difference is that the `VMA` and `LMA` columns are now filled in based on the microcontroller's memory map (from the `stm32_ls.ld` linker script):
+
+* **`.text` (Code):**
+    * **VMA/LMA: `08000000`**
+    * This is the starting address of Flash memory on an STM32 chip. The linker has placed our code here.
+
+* **`.rodata` (Read-Only Data):**
+    * **VMA/LMA: `08000a2c`**
+    * The linker has placed the constant data in Flash immediately after the `.text` section.
+
+* **`.data` (Initialized Variables):**
+    * **VMA: `20000000`**
+    * This is the starting address of **RAM**. The program will *use* this variable in RAM.
+    * **LMA: `08000be8`**
+    * This is the "Load Address." It's in **Flash**. This tells the startup code: "When the chip boots, go to address `0x08000be8` in Flash, copy the `0x00000008` bytes of data you find there, and paste them into RAM at address `20000000`."
+
+* **`.bss` (Uninitialized Variables):**
+    * **VMA: `20000008`**
+    * This section is also in **RAM**, right after `.data`.
+    * Notice it has **no LMA** and a zero `File off`. That's because it's not loaded from Flash. The startup code simply "clears" this 0xa8-byte-sized block of RAM to zeros.
+
+
+  ---
+
+## 7. Automating the Build with `make`
+
+Typing these commands for every file is repetitive and error-prone. The `make` utility automates this entire process. It reads a special file named `Makefile` that defines the rules, dependencies, and commands required to build the project.
+
+### 7.1. Sample Makefile
+
+This is a simple `Makefile` to compile `main.c` into `main.o`.
+
+```makefile
+CC=arm-none-eabi-gcc
+MACHINE=cortex-m4
+# NOTE: -O0 (letter O, zero) is for optimization level 0 (none)
+# -std=gnu11 is a common C standard
+CFLAGS= -c -mcpu=$(MACHINE) -mthumb -std=gnu11 -O0
+
+main.o: main.c
+	$(CC) $(CFLAGS) $^ -o $@
+```
+## 🧩 Makefile Variable Explanation
+
+```makefile
+CC = arm-none-eabi-gcc
+```
+Defines a variable named CC to hold the name of our compiler.
+
+```makefile
+MACHINE = cortex-m4
+```
+Defines a variable MACHINE for our CPU type.
+
+```makefile
+CFLAGS = ...
+```
+Defines a variable CFLAGS to hold all compiler flags.
+
+```makefile
+$(MACHINE)
+```
+This is how we reference the MACHINE variable inside another variable.
+
+```makefile
+
+-O0
+```
+Sets the optimization level to 0 (no optimization) — best for debugging.
+
+## ⚙️ Rule Example
+
+```makefile
+main.o: main.c
+	$(CC) $(CFLAGS) $^ -o $@
+```
+## ⚙️ Rule Explanation
+
+This is a **Rule**.
+
+**main.o:** The **Target** (the file we want to build).  
+**main.c:** The **Dependency** (the file needed to build the target).  
+**$(CC) $(CFLAGS) $^ -o $@:** This is the **Command** to run.  
+
+**$(CC)** and **$(CFLAGS):** Use our defined variables.  
+**$^:** An automatic variable in make that means **"all dependencies"** (in this case, *main.c*).  
+**$@:**
+An automatic variable in make that means **"the target"** (in this case, *main.o*).  
+
+When you run **make** in the terminal, make finds the **main.o** rule, sees that it depends on **main.c**, and (if **main.c** is newer than **main.o**) it will execute the command:
+```
+arm-none-eabi-gcc -c -mcpu=cortex-m4 -mthumb -std=gnu11 -O0 main.c -o main.o
+```
+
+## 8. The Compiler: `arm-none-eabi-gcc`
+
+The compiler we defined in our `Makefile` (`CC=arm-none-eabi-gcc`) is a specific version of the **GNU Compiler Collection (GCC)**. This is a **cross-compiler**, which means it runs on one machine (like your x86 PC) but generates machine code for a different type of machine (our ARM microcontroller).
+
+Let's break down its name:
+
+* **`arm`**: This compiler specifically targets the **ARM** processor architecture.
+* **`none`**: This indicates it's for a "bare-metal" environment. It means the code isn't being built for a specific operating system (like Linux, Windows, etc.). We are running on "none" OS.
+* **`eabi`**: This stands for **Embedded Application Binary Interface**. It's a standard that defines the low-level details of how our compiled code works, such as how function calls are made, how data is laid out in memory, and how object files are formatted.
+* **`gcc`**: The **GNU Compiler Collection**, the actual compiler program.
+
+This entire package is often called a "toolchain" because it includes not just the compiler (`gcc`) but also other essential tools:
+
+* **`arm-none-eabi-as`**: The assembler.
+* **`arm-none-eabi-ld`**: The linker.
+* **`arm-none-eabi-objcopy`**: A tool to convert file formats (e.g., from `.elf` to a `.bin` or `.hex` file to flash to the chip).
+* **`arm-none-eabi-gdb`**: The GNU Debugger, for debugging your code on the target.
+
+When we use `arm-none-eabi-gcc` to compile and link, it intelligently calls these other tools as needed. For example, in our `Makefile`:
+
+* The command to build `main.o` (with the `-c` flag) primarily uses the compiler.
+* The command to build `main.elf` (without the `-c` flag) implicitly calls the **linker (`ld`)** to combine all the object files (`main.o`) and other necessary startup code into a final executable file.
+
+  #!/bin/bash
+
+# This script manually duplicates the build process that 'make' automates.
+
+# --- 1. Compilation Stage ---
+echo "--- Compiling source files... ---"
+
+# Compile main.c into main.o
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -std=gnu11 -O0 -c main.c -o main.o
+
+# Compile uart.c into uart.o
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -std=gnu11 -O0 -c uart.c -o uart.o
+
+# Compile system_init.c into system_init.o
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -std=gnu11 -O0 -c system_init.c -o system_init.o
+
+
+# --- 2. Linking Stage ---
+echo "--- Linking object files into executable... ---"
+
+# Link all .o files into the final .elf executable
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -std=gnu11 -O0 main.o uart.o system_init.o -o main.elf
+
+echo "--- Build complete: main.elf created. ---"
+
+
+# --- 3. Cleanup Stage ---
+echo "--- Cleaning up all build files... ---"
+
+# Remove all the compiled object files and the final executable
+rm -f main.o uart.o system_init.o main.elf
+
+echo "--- Cleanup complete. ---"
+  
+
