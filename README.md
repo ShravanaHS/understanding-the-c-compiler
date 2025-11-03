@@ -535,7 +535,7 @@ When we use `arm-none-eabi-gcc` to compile and link, it intelligently calls thes
   #!/bin/bash
 
 # This script manually duplicates the build process that 'make' automates.
-
+```
 # --- 1. Compilation Stage ---
 echo "--- Compiling source files... ---"
 
@@ -565,5 +565,5 @@ echo "--- Cleaning up all build files... ---"
 rm -f main.o uart.o system_init.o main.elf
 
 echo "--- Cleanup complete. ---"
-  
+  ```
 
